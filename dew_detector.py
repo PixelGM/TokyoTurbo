@@ -1,18 +1,31 @@
-def is_dew_formed(current_temp, dew_point_temp):
-    """
-    Returns True if dew is formed, False otherwise.
+import math
+
+def calculate_dew_point(T_ambient, H_ambient):
+    # Constants for dew point calculation
+    a = 17.27
+    b = 237.7
+    # Calculate the dew point using the formula
+    alpha = ((a * T_ambient) / (b + T_ambient)) + math.log(H_ambient/100.0)
+    T_dew = (b * alpha) / (a - alpha)
+    return T_dew
+
+def dew_formation_detector(T_ambient, T_windshield, H_ambient):
+    # Calculate the dew point
+    T_dew = calculate_dew_point(T_ambient, H_ambient)
     
-    :param current_temp: The current temperature.
-    :param dew_point_temp: The dew point temperature.
-    :return: Boolean value indicating if dew is formed.
-    """
-    return current_temp <= dew_point_temp
+    # Determine if dew is likely to form on the windshield
+    if T_windshield <= T_dew:
+        return True
+    else:
+        return False
 
-# Example usage:
-current_temperature = 10  # Current temperature in degrees Celsius
-dew_point_temperature = 10  # Dew point temperature in degrees Celsius
+# Inputs
+T_ambient = 10.0      # Ambient temperature in degrees Celsius
+T_windshield = 8.0    # Windshield temperature in degrees Celsius
+H_ambient = 85.0      # Ambient humidity in percent
 
-# Call the function with the example parameters
-dew_formed = is_dew_formed(current_temperature, dew_point_temperature)
+# Perform the dew detection
+dew_detected = dew_formation_detector(T_ambient, T_windshield, H_ambient)
 
-print(f"Dew formed: {dew_formed}")
+# Print the result
+print("Dew formation detected:" if dew_detected else "No dew formation detected.")
