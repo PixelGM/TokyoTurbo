@@ -1,51 +1,52 @@
 import cv2
 import numpy as np
 
-def callback(x):
-    pass
+def process_frame(frame):
+    # Convert to grayscale for easier processing
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-# Initialize camera
-cap = cv2.VideoCapture(0)
+    # Apply Gaussian blur to reduce noise and improve edge detection
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
-# Create a window with a slider for adjusting the sensitivity
-cv2.namedWindow('Controls')
-cv2.createTrackbar('Sensitivity', 'Controls', 0, 255, callback)
+    # Apply Canny Edge Detector
+    edges = cv2.Canny(blur, 50, 150)
 
-while True:
-    # Capture frame-by-frame
+    # Define a region of interest (ROI) where to look for lanes
+    height, width = frame.shape[:2]
+    mask = np.zeros_like(edges)
+    polygon = np.array([[
+        (0, height * 0.8),
+        (width, height * 0.8),
+        (width, height),
+        (0, height),
+    ]], np.int32)
+    cv2.fillPoly(mask, polygon, 255)
+    cropped_edges = cv2.bitwise_and(edges, mask)
+
+    # Use Hough Transform to detect lines
+    lines = cv2.HoughLinesP(cropped_edges, 1, np.pi/180, 50, np.array([]), minLineLength=100, maxLineGap=50)
+
+    # Draw lines on the frame
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 5)
+
+    return frame
+
+# Load the video
+cap = cv2.VideoCapture('video_lane2.mp4')
+
+while cap.isOpened():
     ret, frame = cap.read()
+    if not ret:
+        break
 
-    # Convert the frame to HSV color space
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    # Process each frame
+    processed_frame = process_frame(frame)
 
-    # Get the slider value for adjusting the sensitivity
-    sensitivity = cv2.getTrackbarPos('Sensitivity', 'Controls')
-
-    # Define the range for red color
-    lower_red = np.array([0, 120 - sensitivity, 70 - sensitivity])
-    upper_red = np.array([10, 255, 255])
-
-    # Create a mask for red color
-    mask = cv2.inRange(hsv, lower_red, upper_red)
-
-    # Find contours in the mask
-    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Find the largest contour and its center
-    if contours:
-        largest_contour = max(contours, key=cv2.contourArea)
-        M = cv2.moments(largest_contour)
-        if M["m00"] != 0:
-            cX = int(M["m10"] / M["m00"])
-            cY = int(M["m01"] / M["m00"])
-        else:
-            cX, cY = 0, 0
-
-        # Mark the center on the original frame
-        cv2.circle(frame, (cX, cY), 5, (0, 255, 0), 2)
-
-    # Display the marked frame
-    cv2.imshow('Red Color', frame)
+    # Display the processed frame
+    cv2.imshow('Lane Detection', processed_frame)
 
     # Wait for a key event for 1 millisecond
     key = cv2.waitKey(1)
