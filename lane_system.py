@@ -14,12 +14,15 @@ def process_frame(frame):
     # Define a region of interest (ROI) where to look for lanes
     height, width = frame.shape[:2]
     mask = np.zeros_like(edges)
+
+    # Adjust these points to focus on the road area
     polygon = np.array([[
-        (0, height * 0.8),
-        (width, height * 0.8),
-        (width, height),
-        (0, height),
+        (width * 0.1, height),  # Bottom left
+        (width * 0.4, height * 0.6),  # Top left
+        (width * 0.6, height * 0.6),  # Top right
+        (width * 0.9, height)  # Bottom right
     ]], np.int32)
+
     cv2.fillPoly(mask, polygon, 255)
     cropped_edges = cv2.bitwise_and(edges, mask)
 
@@ -37,6 +40,15 @@ def process_frame(frame):
 # Load the video
 cap = cv2.VideoCapture('video_lane2.mp4')
 
+# Check if video opened successfully
+if not cap.isOpened():
+    print("Error opening video file")
+    exit()
+
+# Get the frame rate of the video
+fps = cap.get(cv2.CAP_PROP_FPS)
+frame_delay = int(1000 / fps)  # Delay between frames in milliseconds
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -48,8 +60,8 @@ while cap.isOpened():
     # Display the processed frame
     cv2.imshow('Lane Detection', processed_frame)
 
-    # Wait for a key event for 1 millisecond
-    key = cv2.waitKey(1)
+    # Wait for a key event
+    key = cv2.waitKey(frame_delay)  # Use frame_delay instead of 1
 
     # Press 'q' to close the window
     if key & 0xFF == ord('q'):
